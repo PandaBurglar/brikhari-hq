@@ -3,7 +3,7 @@
  * Each resolver takes a TemplateContext and returns the replacement string.
  */
 
-import type { TemplateContext } from './types';
+import type { TemplateContext, ResolverFn } from './types';
 
 // Domain modules
 import { generatePreamble } from './preamble';
@@ -13,8 +13,9 @@ import { generateDesignMethodology, generateDesignHardRules, generateDesignOutsi
 import { generateTestBootstrap, generateTestCoverageAuditPlan, generateTestCoverageAuditShip, generateTestCoverageAuditReview } from './testing';
 import { generateReviewDashboard, generatePlanFileReviewReport, generateSpecReviewLoop, generateBenefitsFrom, generateCodexSecondOpinion, generateAdversarialStep, generateCodexPlanReview, generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec } from './review';
 import { generateSlugEval, generateSlugSetup, generateBaseBranchDetect, generateDeployBootstrap, generateQAMethodology, generateCoAuthorTrailer } from './utility';
+import { generateInvokeSkill } from './composition';
 
-export const RESOLVERS: Record<string, (ctx: TemplateContext) => string> = {
+export const RESOLVERS: Record<string, ResolverFn> = {
   SLUG_EVAL: generateSlugEval,
   SLUG_SETUP: generateSlugSetup,
   COMMAND_REFERENCE: generateCommandReference,
@@ -48,4 +49,5 @@ export const RESOLVERS: Record<string, (ctx: TemplateContext) => string> = {
   PLAN_COMPLETION_AUDIT_REVIEW: generatePlanCompletionAuditReview,
   PLAN_VERIFICATION_EXEC: generatePlanVerificationExec,
   CO_AUTHOR_TRAILER: generateCoAuthorTrailer,
+  INVOKE_SKILL: generateInvokeSkill,
 };
