@@ -19,24 +19,18 @@ Browse output is now wrapped in trust boundary markers so agents can tell page c
 
 - **Factory Droid support.** Removed `--host factory`, `.factory/` generated skills, Factory CI checks, and all Factory-specific code paths.
 
-## [0.13.7.0] - 2026-03-29 — Composable Skills + Community Wave
+## [0.13.9.0] - 2026-03-29 — Composable Skills
 
-Skills can now load other skills inline, and six community fixes landed with 16 new tests.
+Skills can now load other skills inline. Write `{{INVOKE_SKILL:office-hours}}` in a template and the generator emits the right "read file, skip preamble, follow instructions" prose automatically. Handles host-aware paths and customizable skip lists.
 
 ### Added
 
-- **`{{INVOKE_SKILL:skill-name}}` resolver.** Composable skill loading as a first-class resolver. Emits host-aware prose that tells Claude (or Codex, or Factory) to read another skill's SKILL.md and follow it inline, skipping preamble sections. Supports optional `skip=` parameter for additional sections to skip.
+- **`{{INVOKE_SKILL:skill-name}}` resolver.** Composable skill loading as a first-class resolver. Emits host-aware prose that tells Claude or Codex to read another skill's SKILL.md and follow it inline, skipping preamble sections. Supports optional `skip=` parameter for additional sections to skip.
 - **Parameterized resolver support.** The placeholder regex now handles `{{NAME:arg1:arg2}}`, enabling resolvers that take arguments at generation time. Fully backward compatible with existing `{{NAME}}` patterns.
 - **`{{CHANGELOG_WORKFLOW}}` resolver.** Changelog generation logic extracted from /ship into a reusable resolver. Includes voice guidance ("lead with what the user can now do") inline.
 - **Frontmatter `name:` for skill registration.** Setup script and gen-skill-docs now read `name:` from SKILL.md frontmatter for symlink naming. Enables directory names that differ from invocation names (e.g., `run-tests/` directory registered as `/test`).
-- **Skill discoverability.** Every skill description now contains "(gstack)" so you can find gstack skills by searching in Claude Code's command palette.
-- **Feature signal detection in `/ship`.** Version bump now checks for new routes, migrations, test+source pairs, and `feat/` branches. Catches MINOR-worthy changes that line count alone misses.
-- **Proactive skill routing.** Skills now ask once to add routing rules to your project's CLAUDE.md. This makes Claude invoke the right skill automatically instead of answering directly. Your choice is remembered.
+- **Proactive skill routing.** Skills now ask once to add routing rules to your project's CLAUDE.md. This makes Claude invoke the right skill automatically instead of answering directly. Your choice is remembered in `~/.gstack/config.yaml`.
 - **Annotated config file.** `~/.gstack/config.yaml` now gets a documented header on first creation explaining every setting. Edit it anytime.
-- **`bin/gstack-relink`** re-creates skill symlinks when you change `skill_prefix` via `gstack-config set`. No more manual `./setup` re-run needed.
-- **`bin/gstack-open-url`** cross-platform URL opener (macOS: `open`, Linux: `xdg-open`, Windows: `start`).
-- **Sidebar Write tool.** Both the sidebar agent and headed-mode server now include Write in allowedTools.
-- **Sidebar stderr capture.** The sidebar agent now buffers stderr and includes it in error and timeout messages.
 
 ### Changed
 
@@ -46,10 +40,6 @@ Skills can now load other skills inline, and six community fixes landed with 16 
 
 ### Fixed
 
-- **Telemetry off means off everywhere.** When you set telemetry to off, gstack no longer writes local JSONL analytics files. Clean trust contract.
-- **`find -delete` replaced with POSIX `-exec rm`.** Non-GNU environments no longer choke on session cleanup.
-- **No more preemptive context warnings.** `/plan-eng-review` no longer warns about context limits.
-- **`gstack-relink` no longer double-prefixes `gstack-upgrade`.**
 - **Config grep anchored to line start.** Commented header lines no longer shadow real config values.
 
 ## [0.13.6.0] - 2026-03-29 — GStack Learns
