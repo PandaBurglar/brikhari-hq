@@ -277,6 +277,21 @@ export class BrowserManager {
             .replace(/Google Chrome for Testing/g, 'GStack Browser');
           fs.writeFileSync(chromePlist, patched);
         }
+        // Replace Chromium's Dock icon with ours (Chromium's process owns the Dock icon)
+        const iconCandidates = [
+          path.join(__dirname, '..', '..', 'scripts', 'app', 'icon.icns'),       // repo dev mode
+          path.join(process.env.HOME || '', '.claude', 'skills', 'gstack', 'scripts', 'app', 'icon.icns'), // global install
+        ];
+        const iconSrc = iconCandidates.find(p => fs.existsSync(p));
+        if (iconSrc) {
+          const chromeResources = path.join(chromeContentsDir, 'Resources');
+          // Read original icon name from plist
+          const iconMatch = plistContent.match(/<key>CFBundleIconFile<\/key>\s*<string>([^<]+)<\/string>/);
+          let origIcon = iconMatch ? iconMatch[1] : 'app';
+          if (!origIcon.endsWith('.icns')) origIcon += '.icns';
+          const destIcon = path.join(chromeResources, origIcon);
+          try { fs.copyFileSync(iconSrc, destIcon); } catch { /* non-fatal */ }
+        }
       }
     } catch {
       // Non-fatal: app name just stays as Chrome for Testing

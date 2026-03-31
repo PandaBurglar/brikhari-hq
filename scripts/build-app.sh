@@ -96,6 +96,27 @@ if [ -f "$CHROMIUM_PLIST" ]; then
     plutil -convert xml1 "$CHROMIUM_STRINGS" 2>/dev/null || true
     sed -i '' "s/Google Chrome for Testing/$APP_NAME/g" "$CHROMIUM_STRINGS" 2>/dev/null || true
   fi
+  # Replace Chromium's icon with ours so the Dock shows the GStack icon
+  # (Chromium's process owns the Dock icon, not our launcher)
+  ICON_SRC="$SCRIPT_DIR/app/icon.icns"
+  if [ -f "$ICON_SRC" ]; then
+    CHROMIUM_RESOURCES="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Resources"
+    # Find the original icon filename from Chromium's plist
+    ORIG_ICON=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$CHROMIUM_PLIST" 2>/dev/null || echo "app")
+    # Add .icns extension if not present
+    [[ "$ORIG_ICON" != *.icns ]] && ORIG_ICON="${ORIG_ICON}.icns"
+    cp "$ICON_SRC" "$CHROMIUM_RESOURCES/$ORIG_ICON"
+    echo "  Replaced Chromium icon → $ORIG_ICON"
+  fi
+fi
+
+# ─── Step 3c: App icon ────────────────────────────────────────────
+ICON_SRC="$SCRIPT_DIR/app/icon.icns"
+if [ -f "$ICON_SRC" ]; then
+  cp "$ICON_SRC" "$APP_DIR/Contents/Resources/icon.icns"
+  echo "  App icon installed"
+else
+  echo "  WARNING: No icon.icns found at $ICON_SRC — app will use default icon"
 fi
 
 # ─── Step 4: Info.plist ──────────────────────────────────────────
