@@ -169,6 +169,18 @@ export function createToken(opts: CreateTokenOptions): TokenInfo {
     expiresSeconds = 86400, // 24h default
   } = opts;
 
+  // Validate inputs
+  const validScopes: ScopeCategory[] = ['read', 'write', 'admin', 'meta'];
+  for (const s of scopes) {
+    if (!validScopes.includes(s as ScopeCategory)) {
+      throw new Error(`Invalid scope: ${s}. Valid: ${validScopes.join(', ')}`);
+    }
+  }
+  if (rateLimit < 0) throw new Error('rateLimit must be >= 0');
+  if (expiresSeconds !== null && expiresSeconds !== undefined && expiresSeconds < 0) {
+    throw new Error('expiresSeconds must be >= 0 or null');
+  }
+
   const token = generateToken('gsk_sess_');
   const now = new Date();
   const expiresAt = expiresSeconds === null

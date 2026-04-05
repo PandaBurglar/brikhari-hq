@@ -21,13 +21,28 @@ function sliceBetween(source: string, startMarker: string, endMarker: string): s
 }
 
 describe('Server auth security', () => {
-  // Test 1: /health serves auth token gated on chrome-extension:// Origin
-  // to prevent leaking when the server is tunneled to the internet.
-  test('/health serves auth token only for chrome extension origin', () => {
+  // Test 1: /health must NOT serve the auth token (CSO finding #1 — spoofable Origin)
+  // Extension reads token from ~/.gstack/.auth.json instead.
+  test('/health does NOT serve auth token', () => {
     const healthBlock = sliceBetween(SERVER_SRC, "url.pathname === '/health'", "url.pathname === '/connect'");
-    expect(healthBlock).toContain('AUTH_TOKEN');
-    // Must be gated on chrome-extension Origin
-    expect(healthBlock).toContain('chrome-extension://');
+    // Token must not appear in the health response construction
+    expect(healthBlock).not.toContain('token: AUTH_TOKEN');
+    expect(healthBlock).not.toContain('token: AUTH');
+    // Should have a comment explaining why
+    expect(healthBlock).toContain('NOT served here');
+  });
+
+  // Test 1b: /health must not use chrome-extension Origin gating (spoofable)
+  test('/health does not use spoofable Origin header for token gating', () => {
+    const healthBlock = sliceBetween(SERVER_SRC, "url.pathname === '/health'", "url.pathname === '/connect'");
+    expect(healthBlock).not.toContain("chrome-extension://') ? { token");
+  });
+
+  // Test 1c: newtab must check domain restrictions (CSO finding #5)
+  test('newtab enforces domain restrictions', () => {
+    const newtabBlock = sliceBetween(SERVER_SRC, "newtab with ownership for scoped tokens", "Block mutation commands while watching");
+    expect(newtabBlock).toContain('checkDomain');
+    expect(newtabBlock).toContain('Domain not allowed');
   });
 
   // Test 2: /refs endpoint requires auth via validateAuth

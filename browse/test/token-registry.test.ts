@@ -139,8 +139,11 @@ describe('token-registry', () => {
       expect(validateToken('gsk_sess_unknown')).toBeNull();
     });
 
-    it('rejects expired token', () => {
-      const created = createToken({ clientId: 'expiring', expiresSeconds: -1 });
+    it('rejects expired token', async () => {
+      // expiresSeconds: 0 creates a token that expires at creation time
+      const created = createToken({ clientId: 'expiring', expiresSeconds: 0 });
+      // Wait 1ms so the expiry is definitively in the past
+      await new Promise(r => setTimeout(r, 2));
       expect(validateToken(created.token)).toBeNull();
     });
   });
@@ -343,6 +346,54 @@ describe('token-registry', () => {
       expect(SCOPE_ADMIN.has('text')).toBe(false);
       expect(SCOPE_ADMIN.has('snapshot')).toBe(false);
       expect(SCOPE_ADMIN.has('screenshot')).toBe(false);
+    });
+  });
+
+  // ─── CSO Fix #4: Input validation ──────────────────────────────
+  describe('Input validation (CSO finding #4)', () => {
+    it('rejects invalid scope values', () => {
+      expect(() => createToken({
+        clientId: 'test-invalid-scope',
+        scopes: ['read', 'bogus' as any],
+      })).toThrow('Invalid scope: bogus');
+    });
+
+    it('rejects negative rateLimit', () => {
+      expect(() => createToken({
+        clientId: 'test-neg-rate',
+        rateLimit: -1,
+      })).toThrow('rateLimit must be >= 0');
+    });
+
+    it('rejects negative expiresSeconds', () => {
+      expect(() => createToken({
+        clientId: 'test-neg-expire',
+        expiresSeconds: -100,
+      })).toThrow('expiresSeconds must be >= 0 or null');
+    });
+
+    it('accepts null expiresSeconds (indefinite)', () => {
+      const token = createToken({
+        clientId: 'test-indefinite',
+        expiresSeconds: null,
+      });
+      expect(token.expiresAt).toBeNull();
+    });
+
+    it('accepts zero rateLimit (unlimited)', () => {
+      const token = createToken({
+        clientId: 'test-unlimited-rate',
+        rateLimit: 0,
+      });
+      expect(token.rateLimit).toBe(0);
+    });
+
+    it('accepts valid scopes', () => {
+      const token = createToken({
+        clientId: 'test-valid-scopes',
+        scopes: ['read', 'write', 'admin', 'meta'],
+      });
+      expect(token.scopes).toEqual(['read', 'write', 'admin', 'meta']);
     });
   });
 });

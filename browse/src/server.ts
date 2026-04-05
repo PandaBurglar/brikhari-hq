@@ -893,6 +893,16 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
 
   // ─── newtab with ownership for scoped tokens ──────────────
   if (command === 'newtab' && tokenInfo && tokenInfo.clientId !== 'root') {
+    // Domain check for newtab URL (same as goto)
+    if (args[0] && !checkDomain(tokenInfo, args[0])) {
+      return new Response(JSON.stringify({
+        error: 'Domain not allowed by your token scope',
+        hint: `Allowed domains: ${tokenInfo.domains?.join(', ') || 'none configured'}`,
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const newId = await browserManager.newTab(args[0] || undefined, tokenInfo.clientId);
     return new Response(JSON.stringify({
       tabId: newId,
@@ -1201,11 +1211,10 @@ async function start() {
           uptime: Math.floor((Date.now() - startTime) / 1000),
           tabs: browserManager.getTabCount(),
           currentUrl: browserManager.getCurrentUrl(),
-          // Auth token for extension bootstrap. Only returned when the request
-          // comes from a Chrome extension (Origin: chrome-extension://...).
-          // Previously served unconditionally, but that leaks the token if the
-          // server is tunneled to the internet (ngrok, SSH tunnel).
-          ...(req.headers.get('origin')?.startsWith('chrome-extension://') ? { token: AUTH_TOKEN } : {}),
+          // Auth token NOT served here. Extension reads from ~/.gstack/.auth.json
+          // (written by launchHeaded at browser-manager.ts:243). Serving the token
+          // on an unauthenticated endpoint is unsafe because Origin headers are
+          // trivially spoofable, and ngrok exposes /health to the internet.
           chatEnabled: true,
           agent: {
             status: agentStatus,
