@@ -102,7 +102,7 @@ knowledge base, or whatever is configured in AGENTS.md). When the user is
 ready to build, spawn a FULL session that references the saved plan.
 
 ### Native methodology skills
-Published to ClaHub. Install with `clawhub install`:
+Published to ClawHub. Install with `clawhub install`:
 - `gstack-openclaw-office-hours` — Product interrogation (6 forcing questions)
 - `gstack-openclaw-ceo-review` — Strategic challenge (10-section review, 4 modes)
 - `gstack-openclaw-investigate` — Operational debugging (4-phase methodology)

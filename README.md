@@ -78,10 +78,10 @@ when Claude Code has gstack installed. Paste this to your OpenClaw agent:
 See [docs/OPENCLAW.md](docs/OPENCLAW.md) for advanced dispatch routing and
 the gstack-lite/gstack-full prompt templates.
 
-### Native OpenClaw Skills (via ClaHub)
+### Native OpenClaw Skills (via ClawHub)
 
 Four methodology skills that work directly in your OpenClaw agent, no Claude Code
-session needed. Install from ClaHub:
+session needed. Install from ClawHub:
 
 ```
 clawhub install gstack-openclaw-office-hours gstack-openclaw-ceo-review gstack-openclaw-investigate gstack-openclaw-retro
