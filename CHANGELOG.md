@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.15.12.0] - 2026-04-05 — Content Security: 4-Layer Prompt Injection Defense
+## [0.15.12.0] - 2026-04-06 — Content Security: 4-Layer Prompt Injection Defense
 
 When you share your browser with another AI agent via `/pair-agent`, that agent reads web pages. Web pages can contain prompt injection attacks. Hidden text, fake system messages, social engineering in product reviews. This release adds four layers of defense so remote agents can safely browse untrusted sites without being tricked.
 
@@ -22,9 +22,14 @@ When you share your browser with another AI agent via `/pair-agent`, that agent 
 
 ### Fixed
 
+- `snapshot -i` now auto-includes cursor-interactive elements (dropdown items, popover options, custom listboxes). Previously you had to remember to pass `-C` separately.
+- Snapshot correctly captures items inside floating containers (React portals, Radix Popover, Floating UI) even when they have ARIA roles.
+- Dropdown/menu items with `role="option"` or `role="menuitem"` inside popovers are now captured and tagged with `popover-child`.
 - Chain commands now check domain restrictions on `newtab` (was only checking `goto`).
 - Nested chain commands rejected (recursion guard prevents chain-within-chain).
 - Rate limiting exemption for chain subcommands (chain counts as 1 request, not N).
+- Tunnel liveness verification: `/pair-agent` now probes the tunnel before using it, preventing dead tunnel URLs from reaching remote agents.
+- `/health` serves auth token on localhost for extension authentication (stripped when tunneled).
 - All 16 pre-existing test failures fixed (pair-agent skill compliance, golden file baselines, host smoke tests, relink test timeouts).
 
 ## [0.15.11.0] - 2026-04-05
