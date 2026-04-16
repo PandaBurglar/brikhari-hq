@@ -1,5 +1,6 @@
 import type { TemplateContext } from './types';
 import { getHostConfig } from '../../hosts/index';
+import { generateQuestionTuning } from './question-tuning';
 
 /**
  * Preamble architecture — why every skill needs this
@@ -53,6 +54,9 @@ _TEL_START=$(date +%s)
 _SESSION_ID="$$-$(date +%s)"
 echo "TELEMETRY: \${_TEL:-off}"
 echo "TEL_PROMPTED: $_TEL_PROMPTED"
+# Question tuning (opt-in; see /plan-tune + docs/designs/PLAN_TUNING_V0.md)
+_QUESTION_TUNING=$(${ctx.paths.binDir}/gstack-config get question_tuning 2>/dev/null || echo "false")
+echo "QUESTION_TUNING: $_QUESTION_TUNING"
 mkdir -p ~/.gstack/analytics
 if [ "$_TEL" != "off" ]; then
 echo '{"skill":"${ctx.skillName}","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
@@ -767,6 +771,7 @@ export function generatePreamble(ctx: TemplateContext): string {
     generateBrainHealthInstruction(ctx),
     generateVoiceDirective(tier),
     ...(tier >= 2 ? [generateContextRecovery(ctx), generateAskUserFormat(ctx), generateCompletenessSection(), generateConfusionProtocol()] : []),
+    ...(tier >= 2 ? [generateQuestionTuning(ctx)] : []),
     ...(tier >= 3 ? [generateRepoModeSection(), generateSearchBeforeBuildingSection(ctx)] : []),
     generateCompletionStatus(ctx),
   ];
