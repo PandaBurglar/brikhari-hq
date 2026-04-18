@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Migration: v0.18.5.0 — Remove stale /checkpoint skill installs
+# Migration: v1.0.1.0 — Remove stale /checkpoint skill installs
 #
 # Claude Code ships /checkpoint as a native alias for /rewind, which was
 # shadowing the gstack checkpoint skill. The skill has been split into
@@ -66,10 +66,10 @@ if [ -L "$OLD_TOPLEVEL" ]; then
   target_real=$(resolve_real "$OLD_TOPLEVEL")
   if [ -n "$GSTACK_ROOT_REAL" ] && path_inside "$target_real" "$GSTACK_ROOT_REAL"; then
     rm "$OLD_TOPLEVEL"
-    echo "  [v0.18.5.0] Removed stale /checkpoint symlink (was shadowing Claude Code's /rewind alias)."
+    echo "  [v1.0.1.0] Removed stale /checkpoint symlink (was shadowing Claude Code's /rewind alias)."
     removed_any=1
   else
-    echo "  [v0.18.5.0] Leaving $OLD_TOPLEVEL alone — symlink target is outside gstack."
+    echo "  [v1.0.1.0] Leaving $OLD_TOPLEVEL alone — symlink target is outside gstack."
   fi
 elif [ -d "$OLD_TOPLEVEL" ]; then
   # Regular directory. Only remove if it contains exactly one file named
@@ -79,13 +79,13 @@ elif [ -d "$OLD_TOPLEVEL" ]; then
     target_real=$(resolve_real "$OLD_TOPLEVEL/SKILL.md")
     if [ -n "$GSTACK_ROOT_REAL" ] && path_inside "$target_real" "$GSTACK_ROOT_REAL"; then
       rm -r "$OLD_TOPLEVEL"
-      echo "  [v0.18.5.0] Removed stale /checkpoint install directory (gstack prefix-mode)."
+      echo "  [v1.0.1.0] Removed stale /checkpoint install directory (gstack prefix-mode)."
       removed_any=1
     else
-      echo "  [v0.18.5.0] Leaving $OLD_TOPLEVEL alone — SKILL.md symlink target is outside gstack."
+      echo "  [v1.0.1.0] Leaving $OLD_TOPLEVEL alone — SKILL.md symlink target is outside gstack."
     fi
   else
-    echo "  [v0.18.5.0] Leaving $OLD_TOPLEVEL alone — not a gstack-owned install (has custom content)."
+    echo "  [v1.0.1.0] Leaving $OLD_TOPLEVEL alone — not a gstack-owned install (has custom content)."
   fi
 fi
 # Missing → no-op (idempotency).
@@ -93,12 +93,12 @@ fi
 # --- Shape 2: ~/.claude/skills/gstack/checkpoint/  (gstack owns this dir unconditionally)
 if [ -d "$OLD_NAMESPACED" ] || [ -L "$OLD_NAMESPACED" ]; then
   rm -rf "$OLD_NAMESPACED"
-  echo "  [v0.18.5.0] Removed stale ~/.claude/skills/gstack/checkpoint/ (replaced by context-save + context-restore)."
+  echo "  [v1.0.1.0] Removed stale ~/.claude/skills/gstack/checkpoint/ (replaced by context-save + context-restore)."
   removed_any=1
 fi
 
 if [ "$removed_any" = "1" ]; then
-  echo "  [v0.18.5.0] /checkpoint is now Claude Code's native /rewind alias. Use /context-save to save state and /context-restore to resume."
+  echo "  [v1.0.1.0] /checkpoint is now Claude Code's native /rewind alias. Use /context-save to save state and /context-restore to resume."
 fi
 
 exit 0

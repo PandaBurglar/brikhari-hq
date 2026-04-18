@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 
 const ROOT = path.resolve(import.meta.dir, '..');
-const MIGRATION = path.join(ROOT, 'gstack-upgrade', 'migrations', 'v0.18.5.0.sh');
+const MIGRATION = path.join(ROOT, 'gstack-upgrade', 'migrations', 'v1.0.1.0.sh');
 
 function runMigration(tmpHome: string): { exitCode: number; stdout: string; stderr: string } {
   const result = spawnSync('bash', [MIGRATION], {
@@ -28,7 +28,7 @@ function setupFakeGstackRoot(tmpHome: string): string {
   return gstackDir;
 }
 
-describe('migration v0.18.5.0 — checkpoint ownership guard', () => {
+describe('migration v1.0.1.0 — checkpoint ownership guard', () => {
   let tmpHome: string;
 
   beforeEach(() => {
