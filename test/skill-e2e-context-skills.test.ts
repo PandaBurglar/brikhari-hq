@@ -124,12 +124,13 @@ describeIfSelected('Context Skills E2E (live-fire)', [
   testConcurrentIfSelected('context-save-routing', async () => {
     const { workDir, gstackHome, slug } = setupWorkdir('routing');
 
-    // Minimal prompt — just the slash command. Over-instructing the agent
-    // (e.g., "Use GSTACK_HOME=X and bash at ./bin/") was causing it to
-    // shortcut past the Skill tool. GSTACK_HOME is set via env instead so
-    // the skill's own preamble picks it up naturally.
+    // Prompt pattern: the slash command + explicit "invoke via Skill tool"
+    // instruction. The GSTACK_HOME / ./bin bash setup that used to be in
+    // the prompt now comes via env:. Prompt without the Skill-tool hint
+    // causes the agent to interpret /context-save as a shell token and
+    // skip Skill routing entirely — which defeats this test's purpose.
     const result = await runSkillTest({
-      prompt: `/context-save wintermute progress`,
+      prompt: `Run /context-save wintermute progress. Invoke via the Skill tool. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 12,
@@ -168,7 +169,10 @@ describeIfSelected('Context Skills E2E (live-fire)', [
     spawnSync('git', ['add', 'feature.ts'], { cwd: workDir, stdio: 'pipe', timeout: 5000 });
 
     const result = await runSkillTest({
-      prompt: `Run /context-save ${magicMarker} then run /context-restore.`,
+      prompt: `Two steps:
+1. Run /context-save ${magicMarker} — invoke via the Skill tool.
+2. Run /context-restore — invoke via the Skill tool. Report what it loaded.
+Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 25,
@@ -214,7 +218,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
       '## Working on: omega release\n\n### Summary\nOmega content FRAGMATCH_OMEGA_BUILD\n');
 
     const result = await runSkillTest({
-      prompt: `/context-restore payments`,
+      prompt: `Run /context-restore payments — load the saved context whose title contains "payments". Invoke via the Skill tool. Report what was loaded. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 10,
@@ -251,7 +255,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
     expect(fs.existsSync(checkpointDir)).toBe(false);
 
     const result = await runSkillTest({
-      prompt: `/context-restore`,
+      prompt: `Run /context-restore — there are no saved contexts yet. Invoke via the Skill tool. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 8,
@@ -287,7 +291,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
       '## Working on: seed\n');
 
     const result = await runSkillTest({
-      prompt: `/context-restore list`,
+      prompt: `Run /context-restore list. Invoke via the Skill tool. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 8,
@@ -332,7 +336,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
       '## Working on: legacy pre-rename work\n\n### Summary\nWork saved by OLD_CHECKPOINT_SKILL_LEGACYCOMPAT before the rename.\n\n### Remaining Work\n1. Item from the before-times.\n');
 
     const result = await runSkillTest({
-      prompt: `/context-restore`,
+      prompt: `Run /context-restore — load the most recent saved context. Invoke via the Skill tool. Report the content of the loaded file. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 8,
@@ -386,7 +390,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
       '## Working on: beta LISTCURR_BETA_TOKEN\n');
 
     const result = await runSkillTest({
-      prompt: `/context-save list`,
+      prompt: `Run /context-save list — list saved contexts for the CURRENT branch only (default, no --all). Invoke via the Skill tool. The current branch is "main". Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 10,
@@ -435,7 +439,7 @@ describeIfSelected('Context Skills E2E (live-fire)', [
       '## Working on: beta LISTALL_BETA_TOKEN\n');
 
     const result = await runSkillTest({
-      prompt: `/context-save list --all`,
+      prompt: `Run /context-save list --all — list saved contexts from ALL branches (not just the current one). Invoke via the Skill tool. Report the full list. Do NOT use AskUserQuestion.`,
       workingDirectory: workDir,
       env: { GSTACK_HOME: gstackHome },
       maxTurns: 10,
