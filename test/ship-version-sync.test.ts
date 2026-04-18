@@ -37,7 +37,8 @@ const idempotency = (base: string): { stdout: string; code: number } => {
   const script = `
 cd "${dir}" || exit 2
 BASE_VERSION="${base}"
-CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "0.0.0.0")
+CURRENT_VERSION=$(cat VERSION 2>/dev/null | tr -d '\\r\\n[:space:]' || echo "0.0.0.0")
+[ -z "$CURRENT_VERSION" ] && CURRENT_VERSION="0.0.0.0"
 PKG_VERSION=""
 PKG_EXISTS=0
 if [ -f package.json ]; then
@@ -97,7 +98,10 @@ fi`;
 const syncRepair = (): { code: number } => {
   const script = `
 cd "${dir}" || exit 2
-REPAIR_VERSION=$(cat VERSION)
+REPAIR_VERSION=$(cat VERSION | tr -d '\\r\\n[:space:]')
+if ! printf '%s' "$REPAIR_VERSION" | grep -qE '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$'; then
+  echo "invalid repair semver" >&2; exit 1
+fi
 node -e 'const fs=require("fs"),p=require("./package.json");p.version=process.argv[1];fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\\n")' "$REPAIR_VERSION"`;
   try {
     execSync(script, { shell: "/bin/bash", stdio: "pipe" });
@@ -181,6 +185,28 @@ test("bump: no package.json is silent", () => {
   expect(bump("0.1.0.0").code).toBe(0);
   expect(readFileSync(join(dir, "VERSION"), "utf8").trim()).toBe("0.1.0.0");
   expect(existsSync(join(dir, "package.json"))).toBe(false);
+});
+
+// --- Adversarial review regressions: trailing whitespace + invalid REPAIR_VERSION ---
+
+test("trailing CR in VERSION does not cause false DRIFT_STALE_PKG", () => {
+  // Before the tr-strip fix, VERSION="0.1.0.0\r" read via cat would mismatch
+  // pkg.version="0.1.0.0" and classify as DRIFT_STALE_PKG, then repair would
+  // write garbage \r into package.json. Now CURRENT_VERSION is stripped.
+  writeFileSync(join(dir, "VERSION"), "0.1.0.0\r\n");
+  writeFileSync(join(dir, "package.json"), pkgJson("0.1.0.0"));
+  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: ALREADY_BUMPED", code: 0 });
+});
+
+test("DRIFT REPAIR rejects invalid VERSION semver instead of propagating", () => {
+  // If VERSION is corrupted/manually-edited to something non-semver, the
+  // repair path must refuse rather than writing junk into package.json.
+  writeFileSync(join(dir, "VERSION"), "not-a-semver\n");
+  writeFileSync(join(dir, "package.json"), pkgJson("0.0.0.0"));
+  const r = syncRepair();
+  expect(r.code).toBe(1);
+  // package.json must NOT have been overwritten with the garbage.
+  expect(pkgVersion()).toBe("0.0.0.0");
 });
 
 // --- THE critical regression test: drift-repair does NOT double-bump ---
