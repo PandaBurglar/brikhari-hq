@@ -111,8 +111,11 @@ describe('Sidebar prompt injection defense', () => {
     // The agent should use args from the queue entry
     // It should NOT rebuild args from scratch (the old bug)
     expect(AGENT_SRC).toContain('args || [');
-    // Verify the destructured args come from queueEntry
-    expect(AGENT_SRC).toContain('const { prompt, args, stateFile, cwd, tabId } = queueEntry');
+    // Verify args come from queueEntry. Regex tolerates additional destructured
+    // fields like `canary` and `pageUrl` added by the security module.
+    expect(AGENT_SRC).toMatch(
+      /const \{[^}]*\bprompt\b[^}]*\bargs\b[^}]*\bstateFile\b[^}]*\bcwd\b[^}]*\btabId\b[^}]*\} = queueEntry/
+    );
   });
 
   test('sidebar-agent falls back to defaults if queue has no args', () => {
