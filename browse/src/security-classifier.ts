@@ -456,9 +456,13 @@ export async function checkTranscript(params: {
   ].join('\n');
 
   return new Promise((resolve) => {
+    // Model alias 'haiku' resolves to the latest Haiku (currently
+    // claude-haiku-4-5-20251001). The pinned form 'haiku-4-5' returned 404
+    // because the CLI doesn't accept that shorthand. Using the alias keeps
+    // us on the latest Haiku as models roll forward.
     const p = spawn('claude', [
       '-p', prompt,
-      '--model', 'haiku-4-5',
+      '--model', 'haiku',
       '--output-format', 'json',
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -502,11 +506,17 @@ export async function checkTranscript(params: {
     p.on('error', () => {
       finish({ layer: 'transcript_classifier', confidence: 0, meta: { degraded: true, reason: 'spawn_error' } });
     });
-    // Hard timeout — per plan §E1 (2000ms cap)
+    // Hard timeout. Original spec was 2000ms but real-world `claude -p`
+    // spawns a fresh CLI per call with ~2-3s cold-start + 5-12s inference
+    // on ~1KB prompts. At 2s every call timed out, defeating the
+    // classifier entirely (measured: 0% firing rate). At 15s we catch the
+    // long tail; faster prompts return in under 5s. The stream handler
+    // runs this in parallel with the content scan so the latency is
+    // bounded by this timer, not additive to session wall time.
     setTimeout(() => {
       try { p.kill('SIGTERM'); } catch {}
       finish({ layer: 'transcript_classifier', confidence: 0, meta: { degraded: true, reason: 'timeout' } });
-    }, 2000);
+    }, 15000);
   });
 }
 
