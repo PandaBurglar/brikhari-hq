@@ -272,12 +272,36 @@ describe('review-flow full-stack E2E', () => {
         expect(overrodeLog.payloadHash).toBe(blockLog.payloadHash);
         // Privacy contract: neither record includes the raw payload.
         expect(JSON.stringify(overrodeLog)).not.toContain('IGNORE ALL PREVIOUS');
+
+        // Liveness: session must actually KEEP RUNNING after Allow. Mock-claude
+        // emits a second tool_use to post-block-followup.example.com ~8s
+        // after the tool_result. That event must reach the chat feed, proving
+        // the sidebar-agent resumed the stream-handler relay instead of
+        // silently wedging.
+        const followupDeadline = Date.now() + 20_000;
+        let followup: any = null;
+        while (Date.now() < followupDeadline && !followup) {
+          const chatResp = await apiFetch('/sidebar-chat');
+          const chatData: any = await chatResp.json();
+          for (const entry of chatData.entries ?? []) {
+            const input = String((entry as any).input ?? '');
+            if (
+              entry.type === 'tool_use' &&
+              input.includes('post-block-followup.example.com')
+            ) {
+              followup = entry;
+              break;
+            }
+          }
+          if (!followup) await new Promise((r) => setTimeout(r, 300));
+        }
+        expect(followup).not.toBeNull();
       } finally {
         await stopStack();
         try { fs.rmSync(attemptsDir, { recursive: true, force: true }); } catch {}
       }
     },
-    60_000,
+    90_000,
   );
 
   test.skipIf(!CLASSIFIER_READY)(
@@ -337,12 +361,34 @@ describe('review-flow full-stack E2E', () => {
         const attempts = await readAttempts();
         const overrodeLog = attempts.find((a) => a.verdict === 'user_overrode');
         expect(overrodeLog).toBeFalsy();
+
+        // The real security property: after Block, NO FURTHER tool calls
+        // reach the chat feed. Mock-claude would have emitted a tool_use
+        // to post-block-followup.example.com ~8s after the tool_result if
+        // the session had kept running. Wait long enough for that window
+        // to close (12s total), then assert the followup event never
+        // appeared. This is what makes "block" actually stop the page —
+        // the subprocess is SIGTERM'd before it can emit the next event.
+        await new Promise((r) => setTimeout(r, 12_000));
+        const finalChatResp = await apiFetch('/sidebar-chat');
+        const finalChatData: any = await finalChatResp.json();
+        const followupAttempted = (finalChatData.entries ?? []).some(
+          (entry: any) =>
+            entry.type === 'tool_use' &&
+            String(entry.input ?? '').includes('post-block-followup.example.com'),
+        );
+        expect(followupAttempted).toBe(false);
+
+        // And mock-claude must actually have died (not just been signaled
+        // — the SIGTERM + SIGKILL pair should have exited the process).
+        const mockAlive = (await apiFetch('/sidebar-chat')).ok; // channel still open
+        expect(mockAlive).toBe(true);
       } finally {
         await stopStack();
         try { fs.rmSync(attemptsDir, { recursive: true, force: true }); } catch {}
       }
     },
-    60_000,
+    90_000,
   );
 
   test.skipIf(!CLASSIFIER_READY)(

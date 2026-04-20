@@ -133,11 +133,28 @@ process.on('SIGTERM', () => {
         ],
       },
     });
-    // Stay alive up to 120s waiting for the user's review decision to
-    // propagate back through the kill file. On Allow, we just exit cleanly
-    // after a short delay. On Block, SIGTERM handler exits 143.
-    await sleep(120000);
-    emit({ type: 'result', result: 'mock-claude: review decision timeout' });
+    // Wait long enough for the review decision to propagate (BLOCK path
+    // SIGTERMs us here — see handler at top). On ALLOW the review loop
+    // unblocks and we continue with a second tool_use to a sensitive
+    // domain. If block actually blocks, this second event never reaches
+    // the chat feed (test asserts on that). If allow actually allows, it
+    // does.
+    await sleep(8000);
+    emit({
+      type: 'assistant',
+      message: {
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu_02_followup',
+            name: 'Bash',
+            input: { command: '$B goto https://post-block-followup.example.com/' },
+          },
+        ],
+      },
+    });
+    await sleep(500);
+    emit({ type: 'result', result: 'mock-claude: post-review followup complete' });
     process.exit(0);
   }
 
