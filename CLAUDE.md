@@ -1,4 +1,276 @@
-# gstack development
+# Brikhari-HQ
+
+Personal agent HQ layered on top of [gstack](https://github.com/garrytan/gstack).
+gstack owns the build lifecycle (plan → build → review → ship → reflect).
+Brikhari-HQ adds the layer before that — research, decision-making, and the
+bridge from fuzzy understanding to concrete build specs. Plus one skill that
+hardens gstack's review pass for critical-path code.
+
+This file has two halves:
+
+1. **Brikhari routing (outer shell)** — how Claude picks the right skill for a
+   task on any project. Read this first at the start of every session.
+2. **gstack development (inner)** — preserved verbatim from gstack upstream.
+   Relevant when working on the gstack codebase itself (skill templates, the
+   browse binary, evals, etc.). For everyday user-project work, the routing
+   above is what matters.
+
+---
+
+## Skills in this HQ
+
+Five added on top of gstack's ten:
+
+| Skill | Purpose | Replaces / extends |
+|-------|---------|--------------------|
+| `research` | Pre-product research from fuzzy questions to sharp memos | — |
+| `debate` | Adversarial multi-agent reasoning for genuine trade-offs | — |
+| `poll` | Stochastic multi-agent consensus for ranked picks | — |
+| `contract` | 4-part spec bridging research into build | — |
+| `verify` | Reviewer + resolver loop for critical-path code | Extends gstack `/review` |
+
+gstack's own skills — `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`,
+`/review`, `/browse`, `/qa`, `/ship`, `/learn`, `/retro` — remain available
+unchanged.
+
+## When to use what
+
+Claude reads this section at the start of every session and uses it to pick
+the right skill for the task in front of it.
+
+### Pre-build (Brikhari)
+
+- **Fuzzy domain question, user doesn't know what to build yet** → `research`
+  - Signals: "help me understand", "before I build", "explore", "dig into",
+    "I don't know what this should look like yet", "what's the landscape of"
+  - Produces: a memo at `docs/research/{slug}.md`
+  - Suggests handoff to: `contract`, `debate`, or `poll`
+
+- **Genuine trade-off with two+ legitimate sides** → `debate`
+  - Signals: "should I do X or Y", "is this worth it", "argue this out",
+    "what's the strongest case against"
+  - Produces: a debate transcript at `active/debate/{slug}.json` and synthesis
+  - Best when: you want to *see the fight* between positions, not just pick
+
+- **Enumerated options needing ranked pick with statistical confidence** → `poll`
+  - Signals: "rank these", "which of these", "poll on", "get a second
+    opinion on"
+  - Produces: aggregation report at `active/poll/{slug}.md`
+  - Best when: you have a well-defined question and want to filter single-agent
+    hallucination
+
+### Bridge (Brikhari)
+
+- **Research is done, ready to build** → `contract`
+  - Signals: "let's build", "draft a contract", "spec this out"
+  - Produces: locked contract at `docs/contracts/{slug}.md`
+  - Suggests handoff to: gstack `/office-hours` or directly to
+    `/plan-ceo-review` depending on classification
+
+### Build (gstack)
+
+Once a contract is locked, gstack takes over. The contract's classification
+step determines the build path:
+
+- **Standard build** → `/office-hours` → `/plan-ceo-review` →
+  `/plan-eng-review` → build → `/review` → `/qa` → `/ship`
+- **Critical-path build** (auth, payments, migrations, crypto) → same chain,
+  but `verify` replaces `/review`
+- **Content build** → `/office-hours` → write → `/review`
+- **Research-adjacent prototype** → skip `/ship`, may skip `/plan-eng-review`
+
+### Review
+
+- **Normal code review** → gstack `/review` (single paranoid pass)
+- **Critical-path code review** → `verify` (reviewer + resolver, 2 rounds)
+- **User says "double-check" or "verify"** → `verify`
+
+### Memory
+
+- **Project-specific patterns, decisions, pitfalls** → gstack `/learn`
+- **Cross-project personal preferences** → `~/.claude/brikhari-rules.md`
+
+If you (Claude) make an assumption that gets corrected, or the user expresses
+a preference that should persist, route it appropriately:
+- Scoped to this project → `/learn`
+- Applies across all your work → `~/.claude/brikhari-rules.md`
+
+### Retrospective
+
+- **End of sprint or milestone** → gstack `/retro`
+
+## Typical workflows
+
+### Full research-to-ship cycle
+
+```
+user: "I want to build X but I don't know what it should look like"
+  ↓
+research → memo at docs/research/X.md
+  ↓ (user confirms handoff)
+contract → locked contract at docs/contracts/X.md, classified
+  ↓ (user confirms handoff)
+/office-hours → product reframing
+  ↓
+/plan-ceo-review → /plan-eng-review → build
+  ↓
+/review (or verify if critical-path)
+  ↓
+/browse → /qa → /ship
+```
+
+### Decision-only cycle (no build)
+
+```
+user: "Should I use X or Y?"
+  ↓
+debate (if trade-off) or poll (if enumerated options)
+  ↓
+decision recorded in docs/decisions/ or as an update to research memo
+```
+
+### Quick-build cycle (skip research)
+
+```
+user: "Build X with these specs"
+  ↓
+contract (interactive mode) → locked contract
+  ↓
+/office-hours → standard gstack chain
+```
+
+### Critical-path-only verification
+
+```
+user: "verify the auth code I just wrote"
+  ↓
+verify → reviewer → resolver → round 2 → updated contract verification
+```
+
+## Suggest, don't auto-invoke
+
+Every Brikhari skill that hands off to another skill **suggests and waits for
+confirmation**. Never silently invokes the next step. The user always says yes
+first.
+
+Example:
+```
+research produces memo
+  → "Want me to draft a contract? (yes/no)"
+  → on yes: invoke contract
+```
+
+This holds across the whole HQ. It's the rule that keeps you (the user) in
+control when the pipeline is long.
+
+## CMUX conventions
+
+When running inside a CMUX workspace:
+
+- **Claude's primary pane** handles reasoning and orchestration
+- **Research** spawns a browser pane for live paper/site reading when needed
+- **Debate** spawns one pane per agent (3 panes by default) so the user can
+  watch the debate unfold
+- **Poll** distributes N agents across 2-3 panes for grid readability
+- **Verify** keeps a test-watch pane running during the review loop
+- **MCP orchestration pattern**: instead of registering MCP servers, spawn
+  Codex or alternate Claude instances in visible CMUX panes via `cmux split` +
+  `cmux send`. See `docs/cmux-setup.md` for details.
+
+Outside CMUX, skills work the same but without the live visibility. The
+transcript files (`active/debate/`, `active/poll/`, etc.) become the only
+record.
+
+## Artifact locations
+
+| Artifact | Location | Persistence |
+|----------|----------|-------------|
+| Research memos | `docs/research/{slug}.md` | Permanent |
+| Locked contracts | `docs/contracts/{slug}.md` | Permanent |
+| Debate transcripts | `active/debate/{slug}.json` | Ephemeral (overwritten) |
+| Debate synthesis | `active/debate/{slug}.md` | Ephemeral |
+| Poll reports | `active/poll/{slug}.md` | Ephemeral |
+| Verify reports | `active/verify/{slug}.md` | Ephemeral |
+| Decisions | `docs/decisions/{slug}.md` | Permanent (ADR-style) |
+| Project memory | gstack `/learn` store | Permanent |
+| Cross-project rules | `~/.claude/brikhari-rules.md` | Permanent |
+
+The rule: anything under `docs/` is the durable record; anything under
+`active/` is working state that gets overwritten on re-invocation.
+
+## Composition patterns
+
+A few patterns worth naming because they show up repeatedly:
+
+- **poll-then-debate** — poll 10 agents to narrow to top 2 options, debate the
+  two finalists to decide. Better than either alone for high-stakes picks.
+
+- **research → debate → contract** — when research surfaces a genuine trade-off,
+  debate it before locking the contract. The contract then records the
+  decision and its rationale.
+
+- **verify on a plan, not just code** — for high-stakes architectures, run
+  `verify` on the plan artifact before any code is written. Fresh eyes catch
+  design flaws earlier than they catch implementation bugs.
+
+- **learn-from-verify** — after `verify` resolves an issue, consider whether
+  the pattern should go into gstack `/learn`. "Never trust X input without
+  validation" is a durable lesson; gstack `/learn` is where it lives.
+
+## Global rules file
+
+Personal preferences that apply across all projects live at
+`~/.claude/brikhari-rules.md`. Structure:
+
+```markdown
+# Brikhari — global rules
+
+<!-- Appended as corrections or preferences surface. Newer rules supersede
+older ones. Categories: [STYLE] [CODE] [ARCH] [TOOL] [PROCESS] [DATA] [UX] -->
+
+1. [TOOL] Always use `uv` for Python venvs, not `pip` or `conda`.
+2. [STYLE] American spelling in code and comments, British in research memos.
+3. ...
+```
+
+Distinct from gstack's `/learn` which is project-scoped. Both exist for
+different reasons.
+
+## When I (Claude) am unsure which skill to use
+
+If the user's request is ambiguous between skills:
+
+1. **Don't guess silently.** Ask: "This sounds like either research (if you're
+   still figuring out what to build) or contract (if you're ready to build and
+   just need a spec). Which?"
+2. **Default to the earlier stage.** If split between research and contract,
+   choose research. Better to over-ask than to build the wrong thing.
+3. **Default to the lighter tool.** If split between `verify` and gstack
+   `/review`, choose `/review` unless the code is clearly critical-path.
+
+## Anti-patterns to avoid
+
+- **Running `research` on a trivial question** — don't turn "what's the
+  syntax for X" into a 15-minute research cycle.
+- **Skipping `contract` on infrastructure code** — the contract's FAILURE
+  clause is the entire point. Don't let speed tempt you past it.
+- **Using `verify` on every PR** — gstack `/review` is the default. `verify`
+  is the exception, not the rule.
+- **Letting memos pile up unread** — if research memos are accumulating
+  without contracts following, something is broken in the handoff. Either the
+  memos aren't actionable or the user is treating research as a stalling
+  tactic.
+- **Debating things that should be polled** — if there are clearly enumerated
+  options, poll. Debate is for exploring the shape of a trade-off, not
+  picking from a menu.
+
+---
+
+# gstack development (upstream)
+
+The content below is preserved verbatim from gstack's original `CLAUDE.md`. It
+applies when working on the gstack codebase itself. When doing everyday work
+on user projects, the Brikhari routing above is the primary guide.
 
 ## Commands
 
