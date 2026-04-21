@@ -188,13 +188,23 @@ export async function applyStealthPatches(
       }
 
       // ========================================
-      // 5. LANGUAGES
+      // 5. LANGUAGES + PLATFORM
       // ========================================
       Object.defineProperty(navigator, 'languages', {
         get: () => ['en-US', 'en'],
         enumerable: true,
         configurable: true,
       });
+
+      // Platform must match the user agent. If UA says Mac, platform must be MacIntel.
+      // navigator.platform is 'Linux x86_64' in containers which contradicts a Mac UA.
+      if (navigator.userAgent.includes('Macintosh')) {
+        Object.defineProperty(navigator, 'platform', {
+          get: () => 'MacIntel',
+          enumerable: true,
+          configurable: true,
+        });
+      }
 
       // ========================================
       // 6. CDP ARTIFACT CLEANUP
