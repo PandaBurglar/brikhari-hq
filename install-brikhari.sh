@@ -77,11 +77,6 @@ else
   echo "brikhari-hq projects), re-run with --global-claude-md."
 fi
 
-# Set up the artifact directories the skills write to
-echo "Creating artifact directories (docs/research, docs/contracts, active/)..."
-mkdir -p docs/research docs/contracts docs/decisions
-mkdir -p active/debate active/poll active/verify active/contracts
-
 echo ""
 echo "Done. Brikhari-HQ skills installed."
 echo ""
