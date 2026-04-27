@@ -30,7 +30,7 @@ export const WRITE_COMMANDS = new Set([
 ]);
 
 export const META_COMMANDS = new Set([
-  'tabs', 'tab', 'newtab', 'closetab',
+  'tabs', 'tab', 'tab-each', 'newtab', 'closetab',
   'status', 'stop', 'restart',
   'screenshot', 'pdf', 'responsive',
   'chain', 'diff',
@@ -57,6 +57,22 @@ export const PAGE_CONTENT_COMMANDS = new Set([
   // primary read path, so unwrapped snapshot output is the biggest ingress
   // for indirect prompt injection. Envelope it like every other read.
   'snapshot',
+]);
+
+/**
+ * Subset of PAGE_CONTENT_COMMANDS whose output is derived from the
+ * live page DOM. These channels can carry hidden elements or
+ * ARIA-injection payloads that the centralized envelope wrap alone
+ * does not neutralize, so the scoped-token pipeline runs
+ * `markHiddenElements` on the page before the read and surfaces any
+ * hits as CONTENT WARNINGS to the LLM.
+ *
+ * `console`, `dialog` intentionally excluded — they read separate
+ * runtime state (console capture, dialog events), not the DOM tree.
+ */
+export const DOM_CONTENT_COMMANDS = new Set([
+  'text', 'html', 'links', 'forms', 'accessibility', 'attrs',
+  'media', 'data', 'ux-audit',
 ]);
 
 /** Wrap output from untrusted-content commands with trust boundary markers */
@@ -128,6 +144,7 @@ export const COMMAND_DESCRIPTIONS: Record<string, { category: string; descriptio
   'tab':     { category: 'Tabs', description: 'Switch to tab', usage: 'tab <id>' },
   'newtab':  { category: 'Tabs', description: 'Open new tab. With --json, returns {"tabId":N,"url":...} for programmatic use (make-pdf).', usage: 'newtab [url] [--json]' },
   'closetab':{ category: 'Tabs', description: 'Close tab', usage: 'closetab [id]' },
+  'tab-each':{ category: 'Tabs', description: 'Run a command on every open tab. Returns JSON with per-tab results.', usage: 'tab-each <command> [args...]' },
   // Server
   'status':  { category: 'Server', description: 'Health check' },
   'stop':    { category: 'Server', description: 'Shutdown server' },
