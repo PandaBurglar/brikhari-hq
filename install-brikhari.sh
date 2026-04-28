@@ -32,27 +32,32 @@ EOF
 done
 
 BRIKHARI_SKILLS=(
-  "research.md"
-  "debate.md"
-  "poll.md"
-  "contract.md"
-  "verify.md"
+  "research"
+  "debate"
+  "poll"
+  "contract"
+  "verify"
 )
 
 echo "Installing Brikhari-HQ skills to $CLAUDE_SKILLS_DIR..."
 mkdir -p "$CLAUDE_SKILLS_DIR"
 
+# Claude Code discovers skills as <skills-dir>/<name>/SKILL.md, so each skill
+# is a directory with SKILL.md inside. Symlink the directory so edits to the
+# repo propagate without reinstalling.
 for skill in "${BRIKHARI_SKILLS[@]}"; do
   src="$SCRIPT_DIR/skills/$skill"
   dst="$CLAUDE_SKILLS_DIR/$skill"
 
-  if [[ ! -f "$src" ]]; then
-    echo "  skip: $skill (not found at $src)"
+  if [[ ! -f "$src/SKILL.md" ]]; then
+    echo "  skip: $skill (not found at $src/SKILL.md)"
     continue
   fi
 
-  # Symlink so edits to the repo propagate without reinstalling
-  ln -sf "$src" "$dst"
+  # Remove any existing flat-file symlink from older installs
+  [[ -L "$dst.md" ]] && rm "$dst.md"
+
+  ln -sfn "$src" "$dst"
   echo "  installed: $skill"
 done
 
